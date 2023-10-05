@@ -1,0 +1,15 @@
+<launch>
+  
+  <arg name='input_lidar' default='/sensing/lidar/top/velodyne_packets'/>
+  <arg name='input_point_cloud' default='/velodyne_points'/>
+  <node pkg="drive_data_collector" exec="lidar_data_collector_node" name="lidar_data_collector" output="screen">
+    <remap from="~/input/velodyne_packets" to="$(var input_lidar)"/>
+    <remap from="~/input/velodyne_point_cloud" to="$(var input_point_cloud)"/>
+  </node>
+
+  <node pkg="velodyne_driver" exec="velodyne_driver_node" name="velodyne_drive"/>
+
+  <group>
+    <include file="$(find-pkg-share velodyne_pointcloud)/launch/velodyne_transform_node-VLP16-launch.py"/>
+  </group>
+</launch>
