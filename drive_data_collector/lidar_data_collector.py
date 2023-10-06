@@ -26,25 +26,32 @@ SAVE_PCL2_DATA = True
 class LidarDataCollector(Node):
     def __init__(self, dirname="LIDAR_DATA"):
         super().__init__('lidar_data_collector')
-
+        
+        # Directory for raw data
         self.dirname_raw_data = dirname + "/raw"
         os.makedirs(self.dirname_raw_data, exist_ok=True)
+        self.save_raw_data = SAVE_RAW_DATA
 
+        # Directory for point cloud
         self.dirname_pcl = dirname + "/pcl"
         os.makedirs(self.dirname_pcl, exist_ok=True)
-
-        self.save_raw_data = SAVE_RAW_DATA
         self.save_pcl2_data = SAVE_PCL2_DATA
+
+        
         qos_policy = rclpy.qos.QoSProfile(reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT,
                                           history=rclpy.qos.HistoryPolicy.KEEP_LAST,
                                           depth=1)
         
+        # Subscriber for raw data
         self.create_subscription(VelodyneScan, "~/input/velodyne_packets", self.onLidarRawData, qos_profile=qos_policy)
+
+        # Subscriber for point cloud
         self.create_subscription(PointCloud2, "~/input/velodyne_point_cloud", self.onLidarPointCloud2, 10)
 
-        self.pub_lidar_to_converter = self.create_publisher(VelodyneScan, "velodyne_packets", 1)
+        # Publisher sending raw data to converter
+        self.pub_raw_data = self.create_publisher(VelodyneScan, "velodyne_packets", 1)
     
-    def onLidarRawData(self, msg):
+    def onLidarRawData(self, msg: VelodyneScan):
 
         if self.save_raw_data:
             filename = self.dirname_raw_data + "/" + repr(msg.header.stamp.sec) + "_" + repr(msg.header.stamp.nanosec)
@@ -53,9 +60,9 @@ class LidarDataCollector(Node):
                 packets_array.append(np.array(p.data))
             np.save(filename, np.array(packets_array))
 
-        self.pub_lidar_to_converter.publish(msg)
+        self.pub_raw_data.publish(msg)
     
-    def onLidarPointCloud2(self, msg):
+    def onLidarPointCloud2(self, msg: PointCloud2):
         self.get_logger().info("get PointCloud2 {} {}".format(msg.header.stamp.sec, msg.header.stamp.nanosec))
         arr = rnp.point_cloud2.point_cloud2_to_array(msg)
 
