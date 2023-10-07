@@ -1,0 +1,4 @@
+
+[submodule "drive_data_collector/ros2_numpy"]
+	path = drive_data_collector/ros2_numpy
+	url = git@github.com:bushio/ros2_numpy.git
