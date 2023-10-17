@@ -11,7 +11,7 @@ import math
 from velodyne_msgs.msg import VelodyneScan
 from sensor_msgs.msg import PointCloud2
 import argparse
-sys.path.append("ros2_numpy")
+sys.path.append(os.path.dirname(__file__) + "/ros2_numpy")
 import ros2_numpy as rnp
 
 # Save directory
@@ -54,6 +54,7 @@ class LidarDataCollector(Node):
     def onLidarRawData(self, msg: VelodyneScan):
 
         if self.save_raw_data:
+            self.lidar = msg
             filename = self.dirname_raw_data + "/" + repr(msg.header.stamp.sec) + "_" + repr(msg.header.stamp.nanosec)
             packets_array = []
             for p in self.lidar.packets:
@@ -64,8 +65,7 @@ class LidarDataCollector(Node):
     
     def onLidarPointCloud2(self, msg: PointCloud2):
         self.get_logger().info("get PointCloud2 {} {}".format(msg.header.stamp.sec, msg.header.stamp.nanosec))
-        arr = rnp.point_cloud2.point_cloud2_to_array(msg)
-
+        arr = rnp.numpify(msg)
         if self.save_pcl2_data:
             filename = self.dirname_pcl + "/" + repr(msg.header.stamp.sec) + "_" + repr(msg.header.stamp.nanosec)
             np.save(filename, arr)
