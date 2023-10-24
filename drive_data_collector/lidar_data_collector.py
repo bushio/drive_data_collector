@@ -15,7 +15,6 @@ sys.path.append(os.path.dirname(__file__) + "/ros2_numpy")
 import ros2_numpy as rnp
 
 # Save directory
-DIR_NAME = "LIDAR_DATA_DIR"
 
 # Save flag for lidar raw data
 SAVE_RAW_DATA = False
@@ -24,10 +23,13 @@ SAVE_RAW_DATA = False
 SAVE_PCL2_DATA = True
 
 class LidarDataCollector(Node):
-    def __init__(self, dirname="LIDAR_DATA"):
+    def __init__(self):
         super().__init__('lidar_data_collector')
         
         # Directory for raw data
+        self.declare_parameter('save_dir', "LIDAR_DATA_DIR")
+        dirname = self.get_parameter('save_dir').get_parameter_value().string_value
+        os.makedirs(dirname, exist_ok=True)
         self.dirname_raw_data = dirname + "/raw"
         os.makedirs(self.dirname_raw_data, exist_ok=True)
         self.save_raw_data = SAVE_RAW_DATA
@@ -37,7 +39,6 @@ class LidarDataCollector(Node):
         os.makedirs(self.dirname_pcl, exist_ok=True)
         self.save_pcl2_data = SAVE_PCL2_DATA
 
-        
         qos_policy = rclpy.qos.QoSProfile(reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT,
                                           history=rclpy.qos.HistoryPolicy.KEEP_LAST,
                                           depth=1)
@@ -51,6 +52,7 @@ class LidarDataCollector(Node):
         # Publisher sending raw data to converter
         self.pub_raw_data = self.create_publisher(VelodyneScan, "velodyne_packets", 1)
     
+
     def onLidarRawData(self, msg: VelodyneScan):
 
         if self.save_raw_data:
@@ -62,6 +64,7 @@ class LidarDataCollector(Node):
             np.save(filename, np.array(packets_array))
 
         self.pub_raw_data.publish(msg)
+
     
     def onLidarPointCloud2(self, msg: PointCloud2):
         self.get_logger().info("get PointCloud2 {} {}".format(msg.header.stamp.sec, msg.header.stamp.nanosec))
@@ -74,8 +77,7 @@ def main(args=None):
     print('Hi from lidar_data_collector')
     rclpy.init(args=None)
 
-    os.makedirs(DIR_NAME, exist_ok=True)
-    node = LidarDataCollector(dirname=DIR_NAME)
+    node = LidarDataCollector()
     rclpy.spin(node)
 
     node.destroy_node()
