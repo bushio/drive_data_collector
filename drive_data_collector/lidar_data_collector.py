@@ -11,10 +11,7 @@ import math
 from velodyne_msgs.msg import VelodyneScan
 from sensor_msgs.msg import PointCloud2
 import argparse
-sys.path.append(os.path.dirname(__file__) + "/ros2_numpy")
-import ros2_numpy as rnp
-
-# Save directory
+from .point_cloud_util import point_cloud2_to_array
 
 # Save flag for lidar raw data
 SAVE_RAW_DATA = False
@@ -68,7 +65,7 @@ class LidarDataCollector(Node):
     
     def onLidarPointCloud2(self, msg: PointCloud2):
         self.get_logger().info("get PointCloud2 {} {}".format(msg.header.stamp.sec, msg.header.stamp.nanosec))
-        arr = rnp.numpify(msg)
+        arr = point_cloud2_to_array(msg)
         if self.save_pcl2_data:
             filename = self.dirname_pcl + "/" + repr(msg.header.stamp.sec) + "_" + repr(msg.header.stamp.nanosec)
             np.save(filename, arr)
