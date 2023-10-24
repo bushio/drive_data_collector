@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 def load_npy(dirname: str, save_dirname: str, ext: str = ".npy"):
         files = glob.glob(dirname + "/*" + ext)
         for f in files:
-            print(f)
             arr = np.load(f, allow_pickle=True)
             arr = arr.item()
             lidar_xyz = np.nan_to_num(arr["xyz"])
@@ -23,7 +22,6 @@ def load_npy(dirname: str, save_dirname: str, ext: str = ".npy"):
             ax.scatter(lidar_xyz[:, 0], lidar_xyz[:, 1], lidar_xyz[:, 2], c=intensity, cmap='viridis')
             cbar = plt.colorbar(ax.scatter([], [], []))
             cbar.set_label('Intensity')
-
 
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
