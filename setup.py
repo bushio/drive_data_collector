@@ -24,7 +24,8 @@ setup(
         'console_scripts': [
             'lidar_data_collector_node = drive_data_collector.lidar_data_collector:main',
             'point_cloud_publisher_node = drive_data_collector.point_cloud_publisher:main',
-            'mileage_calculator_node = drive_data_collector.mileage_calculator:main'
+            'mileage_calculator_node = drive_data_collector.mileage_calculator:main',
+            'drivedata_collector_node = drive_data_collector.drivedata_collector_node:main'
         ],
     },
 )
