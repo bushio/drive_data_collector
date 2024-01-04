@@ -10,6 +10,7 @@ import datetime
 import os
 from autoware_auto_planning_msgs.msg import Trajectory, PathWithLaneId
 from autoware_auto_control_msgs.msg import AckermannControlCommand
+from nav_msgs.msg import Odometry
 
 class DriveDataCollector(Node):
     def __init__(self):
@@ -29,21 +30,29 @@ class DriveDataCollector(Node):
                                  "/control/command/control_cmd", 
                                  self.onControl, 
                                  1)
+
+        self.create_subscription(Odometry, 
+                                 "/awsim/ground_truth/localization/kinematic_state", 
+                                 self.onOdometry, 
+                                 1)
     
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
         self.path = None
         self.trajectory = None
         self.control = None
+        self.position = None
+        self.orientation = None
 
         # 保存するディレクトリを作成
         dt_now = datetime.datetime.now()
-        self.save_dir = "datasets/" +  dt_now.strftime('%Y-%m-%d-%H-%M-%S')
+        self.save_dir = "collected_data/" +  dt_now.strftime('%Y-%m-%d-%H-%M-%S')
 
         os.makedirs(self.save_dir, exist_ok=True)
         os.makedirs(self.save_dir + "/path/", exist_ok=True)
         os.makedirs(self.save_dir + "/trajectory/", exist_ok=True)
         os.makedirs(self.save_dir + "/control/", exist_ok=True)
+        os.makedirs(self.save_dir + "/pose/", exist_ok=True)
 
         self.ids = 0
     
@@ -59,29 +68,65 @@ class DriveDataCollector(Node):
         self.control = msg
         #self.get_logger().info("{}".format(self.control))
     
+    def onOdometry(self, msg):
+        #self.self_pose = msg
+        self.twist_linear = msg.twist.twist.linear
+        self.position = msg.pose.pose.position
+        self.orientation = msg.pose.pose.orientation
+
     def timer_callback(self):
-        if (self.path is not None) and (self.control is not None) and (self.trajectory is not None):
+        if (self.path is not None) and \
+            (self.control is not None) and \
+            (self.control is not None) and \
+            (self.position is not None) and \
+            (self.orientation is not None):
+            # 経路の境界線をnumpy形式に変更
             left_bound = self._PointList2Numpy(self.path.left_bound)
             right_bound = self._PointList2Numpy(self.path.right_bound)
+
+            # 生成された経路(Trajectory)をnumpyy形式に変更
             trj_points, trj_vels = self._Trajectory2Numpy(self.trajectory)
+
+            # 制御コマンドをnumpyy形式に変更
             speed = math.ceil(self.control.longitudinal.speed * 3.6)
             accel = self.control.longitudinal.acceleration
             steering_angle = self.control.lateral.steering_tire_angle
             control_cmd = np.array([speed, accel, steering_angle])
             ids_str = '{0:07}'.format(self.ids)
 
+            # Odometory の値をnumpy 形式に変更
+            odometry_speed = float(self.twist_linear.x * 3.6)
+            position_and_orientation = np.array([self.position.x, 
+                                                self.position.y, 
+                                                self.position.z,
+                                                self.orientation.x,
+                                                self.orientation.y,
+                                                self.orientation.z,
+                                                self.orientation.w])
+
+            # ファイル名を設定
             control_cmd_file = "{}/{}.npy".format(self.save_dir + "/control/", ids_str)
             trj_file = "{}/{}.npy".format(self.save_dir + "/trajectory/", ids_str)
             path_left_file = "{}/{}_left.npy".format(self.save_dir + "/path/", ids_str)
             path_right_file = "{}/{}_right.npy".format(self.save_dir + "/path/", ids_str)
+            pose_file = "{}/{}.npy".format(self.save_dir + "/pose/", ids_str)
+            
+            # npy 形式で保存
             np.save(control_cmd_file, control_cmd)
             np.save(trj_file, trj_points)
             np.save(path_left_file, left_bound)
             np.save(path_right_file, right_bound)
-
+            np.save(pose_file, position_and_orientation)
 
             self.ids += 1
-            # self.get_logger().info("{}".format(self.control))
+            self.get_logger().info("save {}".format(ids_str))
+
+            # 同じ値を保存しないように初期化
+            self.trajectory = None
+            self.control = None
+            self.trajectory = None
+            self.position = None
+            self.orientation = None
 
     def _PointList2Numpy(self, points):
         k = []
